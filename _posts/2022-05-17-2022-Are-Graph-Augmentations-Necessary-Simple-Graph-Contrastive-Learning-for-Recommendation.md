@@ -13,7 +13,7 @@ excerpt_separator: <!--more-->
 
 ## 摘要
 
-作者指出，在CL-based推荐系统中，真正影响性能的是CL的损失，而不是原始图的数据增强。基于此发现，作者提出SimGCL，未使用原始图数据增强，在图embedding空间加入均匀分布噪声(uniform noises)来创造对比视图。<!--more-->
+作者指出，在CL-based推荐系统中，**真正影响性能的是CL的损失，而不是原始图的数据增强**。基于此发现，作者提出SimGCL，未使用原始图数据增强，**在图embedding空间加入均匀分布噪声**(uniform noises)来创造对比视图。<!--more-->
 
 ![title](https://sunjc911.github.io/assets/images/SimGCL/title.png)
 
@@ -23,17 +23,25 @@ excerpt_separator: <!--more-->
 
 ![ED](https://sunjc911.github.io/assets/images/SimGCL/ED.png)
 
-但有文献指出就算是edge dropout rate 0.9的对比视图也能有效果，而rate 0.9的视图已经损失了大量的信息并且拥有一个高度倾斜的结构，所以这是违反人们常理的。作者借此提出：*当CL和Recommendation结合时，我们真的需要图数据增强吗？*
+但有文献指出就算是edge dropout rate 0.9的对比视图也能有效果，而rate 0.9的视图已经损失了大量的信息并且拥有一个高度倾斜的结构，所以这是违反人们常理的。作者借此提出：***当CL和Recommendation结合时，我们真的需要图数据增强吗？***
 
-实验结果表明，CL的loss(如InfoNCE)才是性能的关键。图数据增强也不是没有用处，它能帮助模型学习到图不受扰动因素影响的表示。然而图数据增强非常耗人工和时间。作者提出第二个问题：*是否有高效的数据增强方法？*
+实验结果表明，**CL的loss(如InfoNCE)才是性能的关键**。图数据增强也不是没有用处，它能帮助模型学习到图不受扰动因素影响的表示。然而图数据增强非常耗人工和时间。作者提出第二个问题：***是否有高效的数据增强方法？***
 
 ## GCL for recommendation
 
-以SGL为例子
+以SGL[1]为例子, 其使用节点和边的dropout进行数据增强。Loss为：
+
+$$\mathcal{L}_{\text {joint }}=\mathcal{L}_{r e c}+\lambda \mathcal{L}_{c l}$$
+
+包括$$\mathcal{L}_{\text {joint }}$$和$$\mathcal{L}_{c l}$$。$$\mathcal{L}_{c l}$$为InfoNCE：
+
+$$\mathcal{L}_{c l}=\sum_{i \in \mathcal{B}}-\log \frac{\exp \left(\mathrm{z}_{i}^{\prime \top} \mathrm{z}_{i}^{\prime \prime} / \tau\right)}{\sum_{j \in \mathcal{B}} \exp \left(\mathrm{z}_{i}^{\prime \top} \mathrm{z}_{j}^{\prime \prime} / \tau\right)}$$
 
 
 
+## 参考文献
 
+[1] Jiancan Wu, Xiang Wang, Fuli Feng, Xiangnan He, Liang Chen, Jianxun Lian, and Xing Xie. 2021. **Self-supervised graph learning for recommendation**. In SIGIR.
 
 
 
