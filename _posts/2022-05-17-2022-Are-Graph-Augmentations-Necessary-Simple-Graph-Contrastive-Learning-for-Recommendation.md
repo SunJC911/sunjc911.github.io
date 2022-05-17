@@ -16,7 +16,7 @@ tags:
 
 <!--more-->
 
-## ![title](https://sunjc911.github.io/assets/images/SimGCL/title.png)
+![title](https://sunjc911.github.io/assets/images/SimGCL/title.png)
 
 ## 介绍
 
