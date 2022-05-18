@@ -37,11 +37,43 @@ $$\mathcal{L}_{\text {joint }}=\mathcal{L}_{r e c}+\lambda \mathcal{L}_{c l}$$
 
 $$\mathcal{L}_{c l}=\sum_{i \in \mathcal{B}}-\log \frac{\exp \left(\mathrm{z}_{i}^{\prime \top} \mathrm{z}_{i}^{\prime \prime} / \tau\right)}{\sum_{j \in \mathcal{B}} \exp \left(\mathrm{z}_{i}^{\prime \top} \mathrm{z}_{j}^{\prime \prime} / \tau\right)}$$
 
+$$ \mathcal{B}$$为a sampled batch。**CL鼓励z'和z''的一致性。**
 
+SGL以LightGCN[2]为backbone，其消息传递可写成矩阵形式：
+
+$$\mathrm{E}=\frac{1}{1+L}\left(\mathrm{E}^{(0)}+\tilde{\mathrm{A}} \mathrm{E}^{(0)}+\ldots+\tilde{\mathrm{A}}^{L} \mathrm{E}^{(0)}\right)$$
+
+其中：
+
+$$\mathrm{E}^{(0)} \in \mathbb{R}^{|N| \times d}$$
+
+是随机初始化的节点embedding；
+
+$$\tilde{\mathrm{A}} \in \mathbb{R}^{|N| \times|N|}$$
+
+是正则化无向邻接矩阵；
+
+$$\mathrm{z}_{i}^{\prime}=\frac{\mathrm{e}_{i}^{\prime}}{\left\|\mathrm{e}_{i}^{\prime}\right\|_{2}}$$
+
+其中$$\mathbf{e}_{i}^{\prime}$$是$$\mathrm{E}$$中$$\mathbf{e}_{i}$$的数据增强版本。
+
+## Necessity of Graph Augmentation
+
+作者的实验：对比SGL的不同变体性能
+
+![SGLvariants](https://sunjc911.github.io/assets/images/SimGCL/SGLvariants.png)
+
+ND为node dropout，ED为edge dropout，RW为random walk。WA为无数据增强，即$$\mathrm{Z}_{i}^{\prime}=\mathrm{Z}_{i}^{\prime \prime}=\mathrm{Z}_{i}$$,所以WA的$$\mathcal{L}_{c l}$$变为：
+
+$$\mathcal{L}_{c l}=\sum_{i \in \mathcal{B}}-\log \frac{\exp (1 / \tau)}{\sum_{j \in \mathcal{B}} \exp \left(\mathrm{z}_{i}^{\top} \mathrm{z}_{j} / \tau\right)}$$
+
+可以看到**ED最好，但是比WA只好一点**，说明**图增广的轻微扰动有用**。
 
 ## 参考文献
 
 [1] Jiancan Wu, Xiang Wang, Fuli Feng, Xiangnan He, Liang Chen, Jianxun Lian, and Xing Xie. 2021. **Self-supervised graph learning for recommendation**. In SIGIR.
+
+[2] Xiangnan He, Kuan Deng, Xiang Wang, Yan Li, Yong-Dong Zhang, and Meng Wang. 2020. **LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation.** In SIGIR.
 
 
 
