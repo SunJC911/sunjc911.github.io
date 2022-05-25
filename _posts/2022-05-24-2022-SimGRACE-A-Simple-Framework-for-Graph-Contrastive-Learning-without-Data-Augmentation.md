@@ -12,7 +12,7 @@ excerpt_separator: <!--more-->
 
 ## 摘要
 
-数据增强耗时耗力要经验，很难保持语义（semantic），限制了GCL的效率和普适性。作者提出SimGRACE，它不要数据增强。输入原始图到GNN模型和该模型的扰动版本中，得到两个相关图用于对比用来更新参数。SimGRACE关注**graph-level**表示学习。**灵感来源：想要保持语义，编码器的扰动能很好保持原始图的语义。**升级版AT-SimGRACE增强了鲁棒性。<!--more-->
+数据增强耗时耗力要经验，很难保持语义（semantic），限制了GCL的效率和普适性。作者提出SimGRACE，它不要数据增强。输入原始图到GNN模型和该模型的扰动版本中，得到两个相关图用于对比用来更新参数。SimGRACE关注**graph-level**表示学习。**灵感来源：想要保持语义，编码器的扰动能很好保持原始图的语义。**升级版AT-SimGRACE增强了鲁棒性（笔记未讲）。<!--more-->
 
 ![title](https://sunjc911.github.io/assets/images/SimGRACE/title.png)
 
