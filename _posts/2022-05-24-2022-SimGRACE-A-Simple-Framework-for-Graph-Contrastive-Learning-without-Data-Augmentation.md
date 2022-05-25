@@ -1,6 +1,6 @@
 ---
 title: 2022-SimGRACE:A Simple Framework for Graph Contrastive Learning without Data Augmentation
-description:
+description:未描述AT-SimGRACE
 date: 2022-05-24
 categories:
  - WWW
@@ -12,7 +12,7 @@ excerpt_separator: <!--more-->
 
 ## 摘要
 
-数据增强耗时耗力要经验，很难保持语义（semantic），限制了GCL的效率和普适性。作者提出SimGRACE，它不要数据增强。输入原始图到GNN模型和该模型的扰动版本中，得到两个相关图用于对比用来更新参数。SimGRACE关注**graph-level**表示学习。**灵感来源：想要保持语义，编码器的扰动能很好保持原始图的语义。**升级版AT-SimGRACE增强了鲁棒性<!--more-->
+数据增强耗时耗力要经验，很难保持语义（semantic），限制了GCL的效率和普适性。作者提出SimGRACE，它不要数据增强。输入原始图到GNN模型和该模型的扰动版本中，得到两个相关图用于对比用来更新参数。SimGRACE关注**graph-level**表示学习。**灵感来源：想要保持语义，编码器的扰动能很好保持原始图的语义。**升级版AT-SimGRACE增强了鲁棒性。<!--more-->
 
 ![title](https://sunjc911.github.io/assets/images/SimGRACE/title.png)
 
@@ -72,9 +72,20 @@ $$
 \operatorname{sim}\left(z, z^{\prime}\right)=z^{\top} z^{\prime} /\|z\|\left\|z^{\prime}\right\|
 $$
 
-
 **InfoNCE分母为正负样本的和，NT-Xent分母只有负样本。**
+
+Why can SimGRACE work well？
+
+根据[2]的alignment和uniformity，SimGRACE的alignment和uniformity的loss都比sota小。
+
+![au](https://sunjc911.github.io/assets/images/SimGRACE/au.png)
+
+## EXPERIMENTS
+
+结果稍微好或者持平或者低一点。
 
 ## 参考文献
 
 [1] Chen Ting, Kornblith Simon, Norouzi Mohammad, and Hinton Geoffrey. 2020. **A Simple Framework for Contrastive Learning of Visual Representations**. in ICML.
+
+[2] Wang Tongzhou and Isola Phillip. 2020. **Understanding Contrastive Representation Learning through Alignment and Uniformity on the Hypersphere**. in ICML.
