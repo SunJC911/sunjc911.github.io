@@ -1,6 +1,6 @@
 ---
 title: 2022-SimGRACE:A Simple Framework for Graph Contrastive Learning without Data Augmentation
-description:未描述AT-SimGRACE
+description: 未描述AT-SimGRACE
 date: 2022-05-24
 categories:
  - WWW
