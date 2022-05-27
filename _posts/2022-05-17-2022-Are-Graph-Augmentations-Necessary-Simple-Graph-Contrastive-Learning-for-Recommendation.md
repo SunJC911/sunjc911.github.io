@@ -132,3 +132,30 @@ $$\begin{array}{r}
 
 [4] Ian J Goodfellow, Jonathon Shlens, and Christian Szegedy. 2014. **Explaining and harnessing adversarial examples (2014)**. arXiv preprint arXiv:1412.6572 (2014).
 
+## Code
+
+### 处理数据
+
+### 构造稀疏二部邻接矩阵
+
+```
+tmp_adj = sp.csr_matrix((ratings, (user_np, item_np + self.user_num)), shape=(n_nodes, n_nodes),dtype=np.float32)
+```
+
+**sp.csr_matrix**：压缩稀疏矩阵
+
+tmp_adj矩阵大概：
+
+![tmp_adj](https://sunjc911.github.io/assets/images/SimGCL/tmp_adj.png)
+
+```
+adj_mat = tmp_adj + tmp_adj.T
+```
+
+adj_mat 矩阵大概：
+
+![adj_mat](https://sunjc911.github.io/assets/images/SimGCL/adj_mat.png)
+
+### 其他
+
+exec() : 执行括号内的语句；
