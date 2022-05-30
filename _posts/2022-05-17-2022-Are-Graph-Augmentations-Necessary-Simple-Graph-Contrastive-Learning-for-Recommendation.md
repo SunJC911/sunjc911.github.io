@@ -136,6 +136,8 @@ $$\begin{array}{r}
 
 ### 处理数据
 
+pass
+
 ### 构造稀疏二部邻接矩阵
 
 ```
@@ -155,6 +157,244 @@ adj_mat = tmp_adj + tmp_adj.T
 adj_mat 矩阵大概：
 
 ![adj_mat](https://sunjc911.github.io/assets/images/SimGCL/adj_mat.png)
+
+### 归一化矩阵
+
+![normalizematrix](https://sunjc911.github.io/assets/images/SimGCL/normalizematrix.png)
+
+```
+def normalize_graph_mat(adj_mat):
+    shape = adj_mat.get_shape()
+    rowsum = np.array(adj_mat.sum(1))
+    if shape[0] == shape[1]:
+        d_inv = np.power(rowsum, -0.5).flatten()
+        d_inv[np.isinf(d_inv)] = 0.
+        d_mat_inv = sp.diags(d_inv)
+        norm_adj_tmp = d_mat_inv.dot(adj_mat)
+        norm_adj_mat = norm_adj_tmp.dot(d_mat_inv)
+    else:
+        d_inv = np.power(rowsum, -1).flatten()
+        d_inv[np.isinf(d_inv)] = 0.
+        d_mat_inv = sp.diags(d_inv)
+        norm_adj_mat = d_mat_inv.dot(adj_mat)
+    return norm_adj_mat
+```
+
+### 交互矩阵
+
+```
+interaction_mat = sp.csr_matrix((entries, (row, col)), shape=(self.user_num,self.item_num),dtype=np.float32)
+```
+
+### 初始化模型参数
+
+```
+def _init_model(self):
+    initializer = nn.init.xavier_uniform_
+    embedding_dict = nn.ParameterDict({
+        'user_emb': nn.Parameter(initializer(torch.empty(self.data.user_num, self.emb_size))),
+        'item_emb': nn.Parameter(initializer(torch.empty(self.data.item_num, self.emb_size))),
+    })
+    return embedding_dict
+```
+
+### 归一矩阵格式从csr转为coo并存入cuda
+
+csr数据.tocoo()
+
+csr是对coo的行压缩矩阵，coo不能矩阵运算。**可是为什么要转？**
+
+### train
+
+模型放入cuda
+
+```
+model = self.model.cuda()
+```
+
+初始化优化器
+
+```
+optimizer = torch.optim.Adam(model.parameters(), lr=self.lRate)
+```
+
+epoch循环
+
+```
+for epoch in range(self.maxEpoch):
+    for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
+        user_idx, pos_idx, neg_idx = batch
+        model.train()
+        rec_user_emb, rec_item_emb = model()
+        user_emb, pos_item_emb, neg_item_emb = rec_user_emb[user_idx], rec_item_emb[pos_idx], rec_item_emb[neg_idx]
+        rec_loss = bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+        cl_loss = self.cl_rate * model.cal_cl_loss([user_idx,pos_idx])
+        batch_loss =  rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + cl_loss
+        # Backward and optimize
+        optimizer.zero_grad()
+        batch_loss.backward()
+        optimizer.step()
+        if n % 100==0:
+            print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'cl_loss', cl_loss.item())
+    model.eval()
+    with torch.no_grad():
+        self.user_emb, self.item_emb = self.model()
+    self.fast_evaluation(epoch)
+self.user_emb, self.item_emb = self.best_user_emb, self.best_item_emb
+```
+
+batch方法：
+
+```
+def next_batch_pairwise(data, batch_size):
+    training_data = data.training_data
+    shuffle(training_data)
+    batch_id = 0
+    data_size = len(training_data)
+    while batch_id < data_size:
+        if batch_id + batch_size <= data_size:
+            users = [training_data[idx][0] for idx in range(batch_id, batch_size + batch_id)]
+            items = [training_data[idx][1] for idx in range(batch_id, batch_size + batch_id)]
+            batch_id += batch_size
+        else:
+            users = [training_data[idx][0] for idx in range(batch_id, data_size)]
+            items = [training_data[idx][1] for idx in range(batch_id, data_size)]
+            batch_id = data_size
+        u_idx, i_idx, j_idx = [], [], []
+        item_list = list(data.item.keys())
+        for i, user in enumerate(users):
+            i_idx.append(data.item[items[i]])
+            u_idx.append(data.user[user])
+            neg_item = choice(item_list)
+            while neg_item in data.training_set_u[user]:
+                neg_item = choice(item_list)
+            j_idx.append(data.item[neg_item])
+        yield u_idx, i_idx, j_idx
+```
+
+### Loss
+
+rec loss: BPR
+
+```
+def bpr_loss(user_emb, pos_item_emb, neg_item_emb):
+    pos_score = torch.mul(user_emb, pos_item_emb).sum(dim=1)
+    neg_score = torch.mul(user_emb, neg_item_emb).sum(dim=1)
+    loss = -torch.log(10e-8 + torch.sigmoid(pos_score - neg_score))
+    return torch.mean(loss)
+```
+
+cl loss: InfoNCE，对比视图为增加噪声后的embedding
+
+```
+def cal_cl_loss(self, idx):
+    u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
+    i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
+    user_view_1, item_view_1 = self.forward(perturbed=True)
+    user_view_2, item_view_2 = self.forward(perturbed=True)
+    user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], 0.15)
+    item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], 0.15)
+    return user_cl_loss + item_cl_loss
+    
+def InfoNCE(view1, view2, temperature):
+    view1, view2 = F.normalize(view1, dim=1), F.normalize(view2, dim=1)
+    pos_score = (view1 * view2).sum(dim=-1)
+    pos_score = torch.exp(pos_score / temperature)
+    ttl_score = torch.matmul(view1, view2.transpose(0, 1))
+    ttl_score = torch.exp(ttl_score / temperature).sum(dim=1)
+    cl_loss = -torch.log(pos_score / ttl_score)
+    return torch.mean(cl_loss)
+```
+
+perturbed=True后噪声加入：
+
+```
+if perturbed:
+    random_noise = torch.rand_like(ego_embeddings).cuda()
+    ego_embeddings += torch.sign(ego_embeddings) * F.normalize(random_noise, dim=-1) * self.eps
+```
+
+$$\mathrm{e}_{i}^{\prime}=\mathrm{e}_{i}+\Delta_{i}^{\prime}, \quad \mathbf{e}_{i}^{\prime \prime}=\mathrm{e}_{i}+\Delta_{i}^{\prime \prime}$$
+
+其中噪声向量$$\Delta_{i}^{\prime}$$和$$\Delta_{i}^{\prime \prime}$$都遵循$$\|\Delta\|_{2}=\epsilon$$和$$\Delta=\bar{\Delta} \odot \operatorname{sign}\left(\mathbf{e}_{i}\right)$$, $$\bar{\Delta} \in \mathbb{R}^{d} \sim U(0,1)$$。
+
+loss正则化参数
+
+```
+def l2_reg_loss(reg, *args):
+    emb_loss = 0
+    for emb in args:
+        emb_loss += torch.norm(emb, p=2)
+    return emb_loss * reg
+```
+
+反向传播与优化（每次计算完总loss后都要）
+
+```
+optimizer.zero_grad()
+batch_loss.backward()
+optimizer.step()
+```
+
+每个epch后加model.eval()
+
+model.eval() 作用等同于 self.train(False)。简而言之，就是评估模式。而非训练模式。在评估模式下，`batchNorm`层，`dropout`层等用于优化训练而添加的网络层会被关闭，从而使得评估时不会发生偏移。在对模型进行评估时，应该配合使用`with torch.no_grad()` 与 `model.eval()`：
+
+```
+    loop:
+        model.train()    # 切换至训练模式
+        train……
+        model.eval()
+        with torch.no_grad():
+            Evaluation
+    end loop
+```
+
+eval：
+
+precision 
+
+```
+prec = sum([hits[user] for user in hits])
+return prec / (len(hits) * N)
+```
+
+recall
+
+```
+def recall(hits, origin):
+    recall_list = [hits[user]/len(origin[user]) for user in hits]
+    recall = sum(recall_list) / len(recall_list)
+    return recall
+```
+
+F1
+
+```
+def F1(prec, recall):
+    if (prec + recall) != 0:
+        return 2 * prec * recall / (prec + recall)
+    else:
+        return 0
+```
+
+NDCG
+
+```
+def NDCG(origin,res,N):
+    sum_NDCG = 0
+    for user in res:
+        DCG = 0
+        IDCG = 0
+        #1 = related, 0 = unrelated
+        for n, item in enumerate(res[user]):
+            if item[0] in origin[user]:
+                DCG+= 1.0/math.log(n+2)
+        for n, item in enumerate(list(origin[user].keys())[:N]):
+            IDCG+=1.0/math.log(n+2)
+        sum_NDCG += DCG / IDCG
+    return sum_NDCG / len(res)
+```
 
 ### 其他
 
