@@ -58,6 +58,22 @@ deg(·)表示节点的度。WITG($$\mathcal{G}$$)是无向图。下图展示正�
 
 #### Shared Graph Neural Networks
 
+GCN+GraphSage(mean pooling)
+
+#### Graph Contrastive Learning Objective
+
+相同序列的增广图为正对$$\left\{(\mathcal{G}^{’}_{S},\mathcal{G}^{''}_{S})|S∈D\right\}$$，不同序列的增广图为负对$$\left\{(\mathcal{G}^{’}_{S},\mathcal{G}^{''}_{K})|S,K∈D,S≠K\right\}$$。
+
+
+$$
+\mathcal{L}_{G C L}(S)=\sum_{S \in \mathcal{D}}-\log \frac{\exp \left(\cos \left(\mathbf{z}_{S}^{\prime}, \mathbf{z}_{S}^{\prime \prime}\right) / \tau\right)}{\sum_{K \in \mathcal{D}} \exp \left(\cos \left(\mathbf{z}_{S}^{\prime}, \mathbf{z}_{K}^{\prime \prime}\right) / \tau\right)}
+$$
+
+
+ $$\mathbf{z}_{S}^{\prime}$$和$$\mathbf{z}_{S}^{\prime \prime} \in \mathbb{R}^{1 \times d}$$是GNN输出的$$H^{'}_{S}$$和$$H^{’‘}_{S}\in \mathbb{R}^{n \times d}$$的mean pooling后的结果。
+
+### User-specific Gating
+
 
 
 ## 参考文献
