@@ -232,3 +232,112 @@ $$
 消融实验：
 
 ![ablation](https://sunjc911.github.io/assets/images/ICL/ablation.png)
+
+## Code
+
+### 处理数据
+
+```
+def generate_rating_matrix_valid(user_seq, num_users, num_items):
+    # three lists are used to construct sparse matrix
+    row = []
+    col = []
+    data = []
+    for user_id, item_list in enumerate(user_seq):
+        for item in item_list[:-2]:  #
+            row.append(user_id)
+            col.append(item)
+            data.append(1)
+
+    row = np.array(row)
+    col = np.array(col)
+    data = np.array(data)
+    rating_matrix = csr_matrix((data, (row, col)), shape=(num_users, num_items))
+
+    return rating_matrix
+
+def get_user_seqs(data_file):
+    lines = open(data_file).readlines()
+    user_seq = []
+    item_set = set()
+    for line in lines:
+        user, items = line.strip().split(" ", 1)
+        items = items.split(" ")
+        items = [int(item) for item in items]
+        user_seq.append(items)
+        item_set = item_set | set(items)
+    max_item = max(item_set)
+
+    num_users = len(lines)
+    num_items = max_item + 2
+
+    valid_rating_matrix = generate_rating_matrix_valid(user_seq, num_users, num_items)
+    test_rating_matrix = generate_rating_matrix_test(user_seq, num_users, num_items)
+    return user_seq, max_item, valid_rating_matrix, test_rating_matrix
+
+user_seq, max_item, valid_rating_matrix, test_rating_matrix = get_user_seqs(args.data_file)
+
+args.item_size = max_item + 2
+args.mask_id = max_item + 1
+
+```
+
+torch.utils.data.Dataset
+
+https://blog.csdn.net/weixin_44211968/article/details/123744513
+
+```
+class RecWithContrastiveLearningDataset(Dataset):
+    def __init__(self, args, user_seq, test_neg_items=None, data_type="train", similarity_model_type="offline"):
+        self.args = args
+        self.user_seq = user_seq
+        self.test_neg_items = test_neg_items
+        self.data_type = data_type
+        self.max_len = args.max_seq_length
+        # currently apply one transform, will extend to multiples
+        self.augmentations = {
+            "crop": Crop(tao=args.tao),
+            "mask": Mask(gamma=args.gamma),
+            "reorder": Reorder(beta=args.beta),
+            "random": Random(tao=args.tao, gamma=args.gamma, beta=args.beta),
+        }
+        if self.args.augment_type not in self.augmentations:
+            raise ValueError(f"augmentation type: '{self.args.augment_type}' is invalided")
+        print(f"Creating Contrastive Learning Dataset using '{self.args.augment_type}' data augmentation")
+        self.base_transform = self.augmentations[self.args.augment_type]
+        # number of augmentations for each sequences, current support two
+        self.n_views = self.args.n_views
+        
+# main调用上面的class
+cluster_dataset = RecWithContrastiveLearningDataset(
+    args, user_seq[: int(len(user_seq) * args.training_data_ratio)], data_type="train"
+)
+cluster_sampler = SequentialSampler(cluster_dataset)
+cluster_dataloader = DataLoader(cluster_dataset, sampler=cluster_sampler, batch_size=args.batch_size)
+
+train_dataset = RecWithContrastiveLearningDataset(
+    args, user_seq[: int(len(user_seq) * args.training_data_ratio)], data_type="train"
+)
+train_sampler = RandomSampler(train_dataset)
+train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.batch_size)
+
+eval_dataset = RecWithContrastiveLearningDataset(args, user_seq, data_type="valid")
+eval_sampler = SequentialSampler(eval_dataset)
+eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.batch_size)
+
+test_dataset = RecWithContrastiveLearningDataset(args, user_seq, data_type="test")
+test_sampler = SequentialSampler(test_dataset)
+test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=args.batch_size)
+```
+
+```
+cur_rec_tensors = (
+    torch.tensor(user_id, dtype=torch.long),  # user_id for testing
+    torch.tensor(copied_input_ids, dtype=torch.long),
+    torch.tensor(target_pos, dtype=torch.long),
+    torch.tensor(target_neg, dtype=torch.long),
+    torch.tensor(answer, dtype=torch.long),
+) # tuple:5
+```
+
+![subsequent_mask](https://sunjc911.github.io/assets/images/ICL/subsequent_mask.png)
