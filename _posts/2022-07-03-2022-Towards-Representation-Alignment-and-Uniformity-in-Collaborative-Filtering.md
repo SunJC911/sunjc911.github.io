@@ -113,6 +113,27 @@ AU结果
 
 2.对seq的潜在兴趣变量能否用AU分析？
 
+## 核心代码
+
+```
+@staticmethod
+def alignment(x, y):
+    x, y = F.normalize(x, dim=-1), F.normalize(y, dim=-1)
+    return (x - y).norm(p=2, dim=1).pow(2).mean()
+
+@staticmethod
+def uniformity(x):
+    x = F.normalize(x, dim=-1)
+    return torch.pdist(x, p=2).pow(2).mul(-2).exp().mean().log()
+
+def calculate_loss(self, user, item):
+    user_e, item_e = self.encoder(user, item)  # [bsz, dim]
+    align = self.alignment(user_e, item_e)
+    uniform = (self.uniformity(user_e) + self.uniformity(item_e)) / 2
+    loss = align + self.gamma * uniform
+    return loss
+```
+
 ## 参考文献
 
 [1] TongzhouWang and Phillip Isola. 2020. Understanding contrastive representation learning through alignment and uniformity on the hypersphere. In International Conference on Machine Learning. PMLR, 9929–9939.
