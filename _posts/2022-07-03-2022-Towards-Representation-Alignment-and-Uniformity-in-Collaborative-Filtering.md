@@ -49,7 +49,7 @@ uniformity定义为成对高斯函数的均值的对数：
 
 
 $$
-l_{\text {align }} \triangleq \underset{\left(x, x^{+}\right) \sim p_{\text {pos }}}{\mathbb{E}}\left\|\tilde{f}(x)-\tilde{f}\left(x^{+}\right)\right\|^{2}
+l_{\text {uniform }} \triangleq \log \underset{x, y \sim p_{\text {data }}}{\mathbb{E}} e^{-2 \| \tilde{f}(x)-\tilde{f}(y) \|^{2}}
 $$
 
 
