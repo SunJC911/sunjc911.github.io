@@ -1,11 +1,10 @@
 ---
-title: 2022-G-Mixup:Graph Data Augmentation for Graph Classification(tags待定)
+title: 2022-G-Mixup:Graph Data Augmentation for Graph Classification
 description: ICML2022 Outstanding Paper
 date: 2022-08-09
 categories:
  - ICML
 tags:
- - CL
  - Graph
  - DataAugmentation
  - GraphClassification
