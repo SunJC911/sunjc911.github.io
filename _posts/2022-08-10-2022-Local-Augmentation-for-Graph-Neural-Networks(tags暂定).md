@@ -1,7 +1,7 @@
 ---
 title: 2022-Local Augmentation for Graph Neural Networks(tags暂定)
 description:
-date: 2022-08-09
+date: 2022-08-10
 categories:
  - ICML
 tags:
@@ -35,7 +35,7 @@ GNN采用一种消息传递机制，通过传递和聚合来自局部邻域的�
 
 ## Local Augmentation for Graph Neural Networks (LAGNN)
 
-
+在本节中，我们首先介绍如何通过生成模型在局部邻域中生成更多的特征。然后，我们展示了如何从概率的角度将生成模型的预训练和下游GNN训练解耦，从而使我们的局部增强模型可以适用于任何GNN模型，即插即用。然后我们介绍了LAGNN的架构和训练细节。
 
 ![overview](https://sunjc911.github.io/assets/images/LAGNN/overview.png)
 
