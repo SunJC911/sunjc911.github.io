@@ -1,5 +1,5 @@
 ---
-title: 2022-Local Augmentation for Graph Neural Networks(tags暂定)
+title: 2022-Local Augmentation for Graph Neural Networks(看不懂)
 description:
 date: 2022-08-10
 categories:
@@ -7,7 +7,7 @@ categories:
 tags:
  - Graph
  - DataAugmentation
- - Supervised
+ - Pre-train
 excerpt_separator: <!--more--> 
 
 
@@ -38,6 +38,18 @@ GNN采用一种消息传递机制，通过传递和聚合来自局部邻域的�
 在本节中，我们首先介绍如何通过生成模型在局部邻域中生成更多的特征。然后，我们展示了如何从概率的角度将生成模型的预训练和下游GNN训练解耦，从而使我们的局部增强模型可以适用于任何GNN模型，即插即用。然后我们介绍了LAGNN的架构和训练细节。
 
 ![overview](https://sunjc911.github.io/assets/images/LAGNN/overview.png)
+
+### Local Augmentation
+
+动机：现有研究专注于设计消息传递方案。本文设计在局部领域中生成更多特征，对于邻居少的节点有好处，提高表达能力。需知道中心节点的邻居节点分布情况。
+
+优点：训练单一的生成模型的好处：降低计算成本；生成节点相关特征向量；可扩展性和泛化能力。可以用于局部增强模型到归纳学习任务，如图分类。
+
+方法：用CVAE（条件变分自编码器）学习节点特征分布。公式看不懂嘻嘻嘻嘻。
+
+### Decoupling the Generative Model Training from Downstream Graph Learning
+
+
 
 ## 想法
 
