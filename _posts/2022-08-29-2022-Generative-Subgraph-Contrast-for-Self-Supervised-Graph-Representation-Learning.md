@@ -9,6 +9,7 @@ tags:
  - CL
  - SSL
  - RepresentationLearning
+ - OptimalTransport
 excerpt_separator: <!--more--> 
 
 
@@ -92,4 +93,6 @@ OT对均匀性和一致性的影响？
 ## 参考文献
 
 [1] Chen, L., Gan, Z., Cheng, Y., Li, L., Carin, L., Liu, J.: Graph optimal transport for cross-domain alignment. In: International Conference on Machine Learning. pp. 1542–1553. PMLR (2020)
+
+## 代码
 
