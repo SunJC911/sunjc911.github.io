@@ -62,7 +62,11 @@ excerpt_separator: <!--more-->
 大多数图对比学习方法使用节点对或节点-子图对或子图对作为对比样本。特别的是，**子图的特征可以用读出函数来提取**。因此，这些方法主要采用矢量相似度度量来计算这些样本之间的相似度。然而，基于向量内积的相似性度量不能充分利用图的局部结构来很好地描述图的差异。本文使用**最优传输距离**(optimal transport distance (i.e., Wasserstein distance and Gromov-Wasserstein
 distance) )作为对比子图的相似度度量。因此，我们可以**准确地描述子图之间的几何差异**(?)。
 
+PS:[**边缘分布**](https://baike.baidu.com/item/%E8%BE%B9%E7%BC%98%E5%88%86%E5%B8%83/15571865?fr=aladdin)（Marginal Distribution）指在概率论和统计学的多维随机变量中，只包含其中部分变量的概率分布。
+
 #### Wasserstein distance (WD)
+
+[帮助理解](https://michielstock.github.io/posts/2017/2017-11-5-OptimalTransport/#the_optimal_transport_problem)
 
 WD通常用于匹配两个离散分布(例如，两组节点嵌入)[1]。它可以通过计算**两个子图中所有节点对**的差值来表示将一个子图转换为另一个子图的成本。在我们的设置中，WD被用来衡量子图节点之间的相似性。
 
