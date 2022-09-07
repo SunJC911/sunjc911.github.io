@@ -10,7 +10,7 @@ excerpt_separator: <!--more-->
 
 ---
 
-目前进度：将GSC粗暴加入NCL，可以运行产生loss
+目前进度：将GSC粗暴加入NCL，可以运行产生loss，循环到epoch4报错
 
 问题：trainer.py的nodes_batch: 随机选择节点作为中心节点（会重复），**怎么自动获取用户数和物品数？**；loss数量与参数正则化的loss怎么搞？；GATConv和LightGCN层数问题？；how参数初始化？etc.
 
@@ -231,7 +231,27 @@ For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
 self.A_Tensor = torch.from_numpy(sp.coo_matrix(self.A).toarray()).to(self.device)
 ```
 
-**可以运行啦**
+~~**可以运行啦**~~（运行报错）
+
+```
+File "/home/sunjiecheng/workspace/rb/NCL-master/trainer.py", line 154, in _train_epoch
+    self._check_nan(loss)
+  File "/home/sunjiecheng/.conda/envs/rb/lib/python3.8/site-packages/recbole/trainer/trainer.py", line 264, in _check_nan
+    raise ValueError('Training loss is nan')
+ValueError: Training loss is nan
+```
+
+查看self._check_nan(loss)
+
+```
+def _check_nan(self, loss):
+    if torch.isnan(loss):
+        raise ValueError('Training loss is nan')
+```
+
+可能原因：初始化问题(ot的参数初始化导致ncl的loss也是nan) etc.
+
+方法试验：删除ncl的loss部分，初始化ot的参数
 
 目前：losses: 0 bpr+reg; 1 ssl; 2 ot; 3 proto
 
