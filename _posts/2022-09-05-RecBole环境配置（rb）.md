@@ -334,7 +334,9 @@ NCL参数是618816
 | new_w_init_pam_bpr_reg_ot                  | nan    |        |        |        |        |        |
 | new_w_init_pam_ot                          | 0.0749 | 0.1093 | 0.1186 | 0.1127 | 0.2028 | 0.1359 |
 
-wd从0.69变成0.849，gwd变为nan
+**wd从0.69变成0.849，gwd变为nan 搞不懂啊！**
+
+会不会是没分物品和用户的loss导致的
 
 grad_fn的几种backward什么意思
 
