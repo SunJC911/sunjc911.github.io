@@ -45,3 +45,11 @@ SimGCL和XSimGCL使用相同的输入:初始嵌入和邻接矩阵。区别：Sim
 ![exp](https://sunjc911.github.io/assets/images/XSimGCL/exp.png)
 
 ![other](https://sunjc911.github.io/assets/images/XSimGCL/other.png)
+
+文中结论：推广长尾项目的能力似乎与表征的一致性呈正相关
+
+**关于LightGCN**：该算法采用SGC[1]算法去除了常规GCN算法中的变换矩阵和非线性激活函数等冗余操作(用GATConv对LightGCN后的embedding去生成子图是不是就不好？)
+
+## 参考文献
+
+[1] F. Wu, A. Souza, T. Zhang, C. Fifty, T. Yu, and K. Weinberger, “Simplifying graph convolutional networks,” in ICML, 2019, pp. 6861–6871.
