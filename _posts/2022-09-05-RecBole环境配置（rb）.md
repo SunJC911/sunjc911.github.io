@@ -3,9 +3,10 @@ title: RecBole环境配置 + GSC + LightGCN + NCL（rb
 description: Titan X rb 新模型为bpr+reg+OT（暂定，实验中）
 date: 2022-09-05
 categories:
- - RecBole
+ - exp
 tags:
  - RecBole
+ - exp
 excerpt_separator: <!--more--> 
 
 ---
@@ -48,6 +49,72 @@ conda install faiss-gpu -c pytorch
 ```
 
 实测ECCV-2022-Generative Subgraph Contrast for Self-Supervised Graph Representation Learning（**GSC**）和WWW-2022-Improving Graph Collaborative Filtering with Neighborhood-enriched Contrastive Learning（**NCL**）都可以跑。
+
+## loss is nan
+
+搞定"**w**_init_pam_bpr_reg_1e-7ot_l3_150150b_55ui_5k1_10k2_6040"这个，应该就能超过了，加油！
+
+### Train 0 39/165 <u>ot_loss:nan</u>( (改为fuckloss后也为train 0 39/165))
+
+其中loss_user is nan, loss_item还能计算出值（我估计再epoch就nan了，因为和user用一个算法）
+
+loss_user中loss1可以计算，<u>loss2的b_xnet算出来是nan</u> 
+
+### 去掉gwd运行试试
+
+**Train1 57/165 全部loss为nan**(改为fuckloss后也为train 0 39/165)), 从56开始看起，估计出错在bp导致embedding为nan
+
+all_embedding(9669,64)只有（1，64）不为nan，其全为nan。寻找下36的embedding多少。
+
+改为fuck还出错说明self.wd出现了bp为nan的算子
+
+### 调查self.wd
+
+xy正则化有影响，bce有影响
+
+#### 用bce
+
+注释掉def cost_matrix_batch里的x与y的正则化后上面两个情况不报错，等跑完再加上gwd看看效果。（如果保留正则化，1e-12是不是有问题呢？）：<u>13 76/165 all loss nan</u>
+
+同时跑一下加上gwd的（cos_batch 有正则化，未注释）：<u>0 39/165 nan</u>
+
+跑一下加上gwd的（tmux gwd）（def cos_batch注释掉正则化）：<u>0 98/165 gwd nan</u>
+
+#### 用fuck（目前在这）
+
+注释掉def cost_matrix_batch里的x与y的正则化后上面两个情况不报错，等跑完再加上gwd看看效果。（pyc）（如果保留正则化，1e-12是不是有问题呢？）：<u>35 58/165 item loss nan</u> 从57开始看起
+
+这：<u>把采样都改小，定位到ctrl+1, temp2有使得exp为inf的值</u>
+
+https://blog.csdn.net/jump882/article/details/121371018
+
+改为cos_dis = torch.exp((- cos_dis / tau) - (- cos_dis / tau).max())
+
+
+
+同时跑一下加上gwd的
+
+不注释＋fuck呢？
+
+### 添加代码得到反向传播的错误信息
+
+import torch.autograd as autograd
+
+with autograd.detect_anomaly():
+
+​            loss.backward()
+
+什么算子会导致bp为loss
+
+产生的疑问：
+
+torch.exp输入什么值会nan
+
+记录：
+
+self.wd()开始对embedding动手了
+
+cos_dist= torch.nn.functional.relu(cos_distance - threshold)
 
 ## 要解决的问题
 
@@ -319,42 +386,55 @@ NCL参数是618816
 
 ## 实验消融表格
 
-| model                                                        | r10        | n10        | r20        | n20        | r50       | n50        |
-| :----------------------------------------------------------- | ---------- | ---------- | ---------- | ---------- | --------- | ---------- |
-| ncl_all                                                      | 0.2057     | 0.2732     | 0.3037     | 0.2843     | 0.4686    | 0.3300     |
-| **LightGCN**                                                 | 0.1876     | 0.2514     | 0.2796     | 0.2620     | 0.4469    | 0.3091     |
-| ncl_wo_init_pam                                              | 0.1647     | 0.2248     | 0.2503     | 0.2351     | 0.4049    | 0.2783     |
-| ncl_wo_loss_reg                                              | 0.205      | 0.2725     | 0.3032     | 0.2841     | 0.4682    | 0.3301     |
-| ncl_wo_init_pam_and_loss_reg                                 | 0.1647     | 0.2248     | 0.2503     | 0.2351     | 0.4049    | 0.2783     |
-| new_wo_init_pam_w_bpr_ot                                     | 0.1559     | 0.2116     | 0.2375     | 0.2223     | 0.3894    | 0.2656     |
-| new_wo_init_pam_w_bpr_reg_ot                                 | 0.1567     | 0.2129     | 0.2396     | 0.2234     | 0.392     | 0.2669     |
-| new_wo_init_pam_w_bpr_reg_ot_layer0                          | 0.1559     | 0.2122     | 0.2381     | 0.2226     | 0.3898    | 0.2657     |
-| new_wo_init_pam_w_bpr_reg_ot_layer2                          | 0.1569     | 0.213      | 0.2395     | 0.2236     | 0.3915    | 0.2667     |
-| new_wo_init_pam_w_bpr_reg_ot_**layer3****                    | 0.1573     | 0.2126     | 0.2426     | 0.2245     | 0.3936    | 0.268      |
-| new_w_gscinit_pam_bpr_reg_ot_layer3_150150                   | 0.1548     | 0.2124     | 0.2378     | 0.2229     | 0.3902    | 0.2658     |
-| new_w_newgscinit_pam_bpr_reg_ot_layer3_150150                | nan        |            |            |            |           |            |
-| main_wo_init_pam_w_bpr_reg_ot_l3_gat2                        | 0.1546     | 0.2102     | 0.2364     | 0.2212     | 0.3887    | 0.2647     |
-| main_wo_init_pam_w_bpr_reg_ot_l3_300batch                    | 0.1549     | 0.2125     | 0.239      | 0.2236     | 0.3895    | 0.266      |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150batch                 | 0.1548     | 0.212      | 0.2392     | 0.223      | 0.3912    | 0.2658     |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150batch_k30             | 0.1537     | 0.2117     | 0.2377     | 0.2223     | 0.3857    | 0.264      |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150batch_5k1_5k2         | **0.1669** | **0.2237** | 0.2529     | 0.2342     | 0.4045    | 0.2771     |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_**5**k1\_**10**k2   | 0.1647     | 0.2228     | 0.2534     | 0.2347     | 0.4049    | 0.2774     |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_5k1_10k2_**6040**   | 0.1582     | 0.2167     | 0.2407     | 0.2265     | 0.3924    | 0.2688     |
-| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_5k1_10k2_6040 | 0.1647     | 0.2216     | **0.2548** | **0.2346** | **0.408** | **0.2782** |
-| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_ui_5k1_10k2_6040 | 0.1656     | 0.2215     | 0.2524     | 0.2334     | 0.4075    | 0.2772     |
-| wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_55ui_5k1_10k2_6040 | 0.1656     | 0.2215     | 0.2524     | 0.2334     | 0.4075    | 0.2772     |
-| wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_55ui_5k1_10k2_6040_f | **0.1663** | **0.2221** | 0.2531     | 0.2336     | 0.4079    | 0.2776     |
-| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_200100b_5k1_10k2_6040 | 0.1659     | 0.2221     | 0.2531     | 0.2343     | 0.4058    | 0.2774     |
-| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_512512b_5k1_10k2_6040 | 0.1651     | 0.2221     | 0.2524     | 0.2337     | 0.4053    | 0.277      |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_6040_0k1_10k2       | 0.1597     | 0.211      | 0.241      | 0.2225     | 0.392     | 0.266      |
-| main_wo_init_pam_w_bpr_reg_ot_l3_300b_5k1_10k2_6040          | 0.1642     | 0.2223     | 0.2522     | 0.2339     | 0.4043    | 0.2767     |
-| new_wo_init_w_bpr_reg_ot_l3_300300b_6040_5k1_10k2            | 0.1607     | 0.2172     | 0.2465     | 0.2289     | 0.3977    | 0.2716     |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_10k1_5k2            | 0.1633     | 0.2207     | 0.2506     | 0.232      | 0.4016    | 0.2746     |
-| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_10k1_10k2           | 0.161      | 0.2203     | 0.2471     | 0.2307     | 0.3995    | 0.2732     |
-| new_w_gscinit_pam_bpr_reg_ot_mean                            | 0.1559     | 0.2125     | 0.2375     | 0.2225     | 0.3893    | 0.2658     |
-| new_w_init_pam_bpr_reg_ot_0.0001(小10倍)lr                   | 0.0609     | 0.0956     | 0.1005     | 0.0994     | 0.1784    | 0.12       |
-| new_w_init_pam_bpr_reg_ot                                    | nan        |            |            |            |           |            |
-| new_w_init_pam_ot                                            | 0.0749     | 0.1093     | 0.1186     | 0.1127     | 0.2028    | 0.1359     |
+| model                                                        | r10        | n10        | r20        | n20        | r50        | n50        |
+| :----------------------------------------------------------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
+| ncl_all                                                      | 0.2057     | 0.2732     | 0.3037     | 0.2843     | 0.4686     | 0.3300     |
+| SGL                                                          | 0.1888     | 0.2526     | 0.2848     | 0.2649     | 0.4487     | 0.3111     |
+| LightGCN                                                     | 0.1876     | 0.2514     | 0.2796     | 0.2620     | 0.4469     | 0.3091     |
+| ncl_wo_init_pam                                              | 0.1647     | 0.2248     | 0.2503     | 0.2351     | 0.4049     | 0.2783     |
+| ncl_wo_loss_reg                                              | 0.205      | 0.2725     | 0.3032     | 0.2841     | 0.4682     | 0.3301     |
+| ncl_wo_init_pam_and_loss_reg                                 | 0.1647     | 0.2248     | 0.2503     | 0.2351     | 0.4049     | 0.2783     |
+| new_wo_init_pam_w_bpr_ot                                     | 0.1559     | 0.2116     | 0.2375     | 0.2223     | 0.3894     | 0.2656     |
+| new_wo_init_pam_w_bpr_reg_ot                                 | 0.1567     | 0.2129     | 0.2396     | 0.2234     | 0.392      | 0.2669     |
+| new_wo_init_pam_w_bpr_reg_ot_layer0                          | 0.1559     | 0.2122     | 0.2381     | 0.2226     | 0.3898     | 0.2657     |
+| new_wo_init_pam_w_bpr_reg_ot_layer2                          | 0.1569     | 0.213      | 0.2395     | 0.2236     | 0.3915     | 0.2667     |
+| new_wo_init_pam_w_bpr_reg_ot_**layer3****                    | 0.1573     | 0.2126     | 0.2426     | 0.2245     | 0.3936     | 0.268      |
+| new_w_gscinit_pam_bpr_reg_ot_layer3_150150                   | 0.1548     | 0.2124     | 0.2378     | 0.2229     | 0.3902     | 0.2658     |
+| new_w_newgscinit_pam_bpr_reg_ot_layer3_150150                | nan        |            |            |            |            |            |
+| main_wo_init_pam_w_bpr_reg_ot_l3_gat2                        | 0.1546     | 0.2102     | 0.2364     | 0.2212     | 0.3887     | 0.2647     |
+| main_wo_init_pam_w_bpr_reg_ot_l3_300batch                    | 0.1549     | 0.2125     | 0.239      | 0.2236     | 0.3895     | 0.266      |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150batch                 | 0.1548     | 0.212      | 0.2392     | 0.223      | 0.3912     | 0.2658     |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150batch_k30             | 0.1537     | 0.2117     | 0.2377     | 0.2223     | 0.3857     | 0.264      |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150batch_5k1_5k2         | 0.1669     | 0.2237     | 0.2529     | 0.2342     | 0.4045     | 0.2771     |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_**5**k1\_**10**k2   | 0.1647     | 0.2228     | 0.2534     | 0.2347     | 0.4049     | 0.2774     |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_5k1_10k2_**6040**   | 0.1582     | 0.2167     | 0.2407     | 0.2265     | 0.3924     | 0.2688     |
+| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_5k1_10k2_6040 | 0.1647     | 0.2216     | 0.2548     | 0.2346     | 0.408      | 0.2782     |
+| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_ui_5k1_10k2_6040 | 0.1656     | 0.2215     | 0.2524     | 0.2334     | 0.4075     | 0.2772     |
+| ncl_all                                                      | 0.2057     | 0.2732     | 0.3037     | 0.2843     | 0.4686     | 0.3300     |
+| SGL                                                          | 0.1888     | 0.2526     | 0.2848     | 0.2649     | 0.4487     | 0.3111     |
+| LightGCN                                                     | 0.1876     | 0.2514     | 0.2796     | 0.2620     | 0.4469     | 0.3091     |
+| main_w_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_ui_5k1_10k2_6040_wd_f_nc(new_cos_dis) | 0.1733     | 0.2394     | 0.2629     | 0.2495     | 0.4173     | 0.292      |
+| w_init_pam_w_bpr_reg_**1e-7**ot_l3\_**5050**b_ui_5k1_10k2_6040_wd_f_nc(50) | 0.187      | 0.2522     | 0.2797     | 0.263      | 0.444      | 0.3093     |
+| 55b_3k1_2k2_6040_nc_f                                        | **0.1889** | **0.2522** | **0.2835** | **0.2639** | **0.4493** | **0.3108** |
+| 55b_3k1_2k2_6040_nc_bce(bce)                                 |            |            |            |            |            |            |
+|                                                              |            |            |            |            |            |            |
+| w_init_w_bpr_reg_**1e-7**ot_l3_150150b_ui_5k1_10k2_6040_wdbce_nc(wdbce) | 0.1731     | 0.2393     | 0.2629     | 0.2495     | 0.4179     | 0.2922     |
+|                                                              |            |            |            |            |            |            |
+| main\_**w**_init_pam_bpr_reg_1e-7ot_l3_150150b_55ui_5k1_10k2_6040 |            |            |            |            |            |            |
+| wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_55ui_5k1_10k2_6040 | 0.1656     | 0.2215     | 0.2524     | 0.2334     | 0.4075     | 0.2772     |
+| wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_55ui_5k1_10k2_6040_f | **0.1663** | **0.2221** | 0.2531     | 0.2336     | 0.4079     | 0.2776     |
+| wo_init_pam_w_bpr_reg_**1e-7**ot_l3_150150b_55ui_5k1_10k2_6040_2f | 0.1656     | 0.2215     | 0.2524     | 0.2334     | 0.4075     | 0.2772     |
+| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_200100b_5k1_10k2_6040 | 0.1659     | 0.2221     | 0.2531     | 0.2343     | 0.4058     | 0.2774     |
+| main_wo_init_pam_w_bpr_reg_**1e-7**ot_l3_512512b_5k1_10k2_6040 | 0.1651     | 0.2221     | 0.2524     | 0.2337     | 0.4053     | 0.277      |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_6040_0k1_10k2       | 0.1597     | 0.211      | 0.241      | 0.2225     | 0.392      | 0.266      |
+| main_wo_init_pam_w_bpr_reg_ot_l3_300b_5k1_10k2_6040          | 0.1642     | 0.2223     | 0.2522     | 0.2339     | 0.4043     | 0.2767     |
+| new_wo_init_w_bpr_reg_ot_l3_300300b_6040_5k1_10k2            | 0.1607     | 0.2172     | 0.2465     | 0.2289     | 0.3977     | 0.2716     |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_10k1_5k2            | 0.1633     | 0.2207     | 0.2506     | 0.232      | 0.4016     | 0.2746     |
+| main_wo_init_pam_w_bpr_reg_ot_l3_150150b_10k1_10k2           | 0.161      | 0.2203     | 0.2471     | 0.2307     | 0.3995     | 0.2732     |
+| new_w_gscinit_pam_bpr_reg_ot_mean                            | 0.1559     | 0.2125     | 0.2375     | 0.2225     | 0.3893     | 0.2658     |
+| new_w_init_pam_bpr_reg_ot_0.0001(小10倍)lr                   | 0.0609     | 0.0956     | 0.1005     | 0.0994     | 0.1784     | 0.12       |
+| new_w_init_pam_bpr_reg_ot                                    | nan        |            |            |            |            |            |
+| new_w_init_pam_ot                                            | 0.0749     | 0.1093     | 0.1186     | 0.1127     | 0.2028     | 0.1359     |
 
 **wd从0.69变成0.849，gwd变为nan 搞不懂啊！**
 
