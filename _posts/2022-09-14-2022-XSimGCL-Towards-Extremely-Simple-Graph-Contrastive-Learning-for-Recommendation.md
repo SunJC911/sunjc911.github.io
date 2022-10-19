@@ -1,5 +1,5 @@
 ---
-title: 2022-XSimGCL: Towards Extremely Simple Graph Contrastive Learning for Recommendation
+title: 2022-XSimGCL Towards Extremely Simple Graph Contrastive Learning for Recommendation
 description:
 date: 2022-09-14
 categories:
