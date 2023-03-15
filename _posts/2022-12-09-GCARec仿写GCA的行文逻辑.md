@@ -1,6 +1,6 @@
 ---
 title: GCARec仿写GCA的行文逻辑
-description:GCA，GCARec
+description: GCA，GCARec
 date: 2022-12-09
 categories:
  - Writing
